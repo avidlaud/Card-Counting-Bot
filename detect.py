@@ -77,6 +77,9 @@ def detect(save_img=False):
     t0 = time.time()
     img = torch.zeros((1, 3, imgsz, imgsz), device=device)  # init img
     _ = model(img.half() if half else img.float()) if device.type != 'cpu' else None  # run once
+
+    frame_number = 0
+
     for path, img, im0s, vid_cap in dataset:
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
@@ -100,6 +103,8 @@ def detect(save_img=False):
         # Apply Classifier
         if classify:
             pred = apply_classifier(pred, modelc, img, im0s)
+        
+        print(frame_number)
 
         # Process detections
         for i, det in enumerate(pred):  # detections for image i
@@ -155,6 +160,7 @@ def detect(save_img=False):
                         h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                         vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*opt.fourcc), fps, (w, h))
                     vid_writer.write(im0)
+        frame_number += 1
 
     if save_txt or save_img:
         print('Results saved to %s' % os.getcwd() + os.sep + out)
