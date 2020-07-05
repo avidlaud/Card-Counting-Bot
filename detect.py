@@ -5,6 +5,21 @@ from utils.datasets import *
 from utils.utils import *
 from utils.blackjack_utils import *
 
+running_total = 0
+seen_cards = [False] * 52
+
+#Stucture: [[my_cards], [dealer_cards]]
+past_five = []
+past_four = []
+past_three = []
+past_two = []
+past_one = []
+
+prev_seen = []
+
+current_cards = []
+
+card_values = load_card_values('data/card.values')
 
 def detect(save_img=False):
     imgsz = (320, 192) if ONNX_EXPORT else opt.img_size  # (320, 192) or (416, 256) or (608, 352) for (height, width)
@@ -115,8 +130,14 @@ def detect(save_img=False):
             if classify:
                 pred = apply_classifier(pred, modelc, img, im0s)
 
+            #Blackjack full frame parameters:
+            cards_in_frame = []
+            print("RESET")
+
             # Process detections
             for i, det in enumerate(pred):  # detections for image i
+                #Blackjack parameters:
+                card_x, card_y, card_class = 0, 0, 0
                 if webcam:  # batch_size >= 1
                     p, s, im0 = path[i], '%g: ' % i, im0s[i].copy()
                 else:
@@ -140,6 +161,10 @@ def detect(save_img=False):
                             xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                             with open(save_path[:save_path.rfind('.')] + '.txt', 'a') as file:
                                 file.write(('%g ' * 5 + '\n') % (cls, *xywh))  # label format
+                            #Blackjack information
+                            print(xywh[:2])
+                            card_class, card_x, card_y = int(cls), xywh[0], xywh[1]
+                            cards_in_frame.append((card_class, card_x, card_y))
 
                         if save_img or view_img:  # Add bbox to image
                             label = '%s %.2f' % (names[int(cls)], conf)
@@ -169,6 +194,10 @@ def detect(save_img=False):
                             h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                             vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*opt.fourcc), fps, (w, h))
                         vid_writer.write(im0)
+            
+            #Blackjack gameplay
+            evaluate_position(cards_in_frame)
+
         frame_number += 1
 
     if save_txt or save_img:
@@ -178,13 +207,74 @@ def detect(save_img=False):
 
     print('Done. (%.3fs)' % (time.time() - t0))
 
+def update_seen_cards():
+    #If seen in at least three out of five past frames, card is valid:
+    all_seen = []
+    past_lists = [past_five, past_four, past_three, past_two, past_one]
+    for l in past_lists:
+        for sublist in l:
+            all_seen += sublist
+    confirmed_cards = []
+    for num in set(all_seen):
+        if all_seen.count(num) >= 3:
+            confirmed_cards.append(num)
+    #Determine if there is a new card
+    new_cards = set(all_seen).difference(set(confirmed_cards))
+    for new_card in new_cards:
+        if seen_cards[new_card]:
+            #Card has already been seen - new deck, restart count
+            running_total = 0
+        else:
+            seen_cards[new_card] = True
+    
+
+
+def evaluate_position(cards):
+    my_cards = []
+    dealer_cards = []
+    update_seen_cards()
+    for card in cards:
+        card_class, card_x, card_y = card
+        if card_y > 0.5:
+            my_cards.append(card)
+        else:
+            dealer_cards.append(card)
+
+    hand_value = 0
+    my_card_values = [int(card_values[x[0]]) for x in my_cards]
+    dealer_card_values = [int(card_values[y[0]]) for y in dealer_cards]
+    print(my_card_values)
+    print(dealer_card_values)
+    print("EVALUATED:", cards)
+    print("MY CARDS:", my_cards)
+    print("MY HAND VALUE")
+    print(evaluate_hand(my_card_values))
+    print("DEALER CARDS:", dealer_cards)
+    print("DEALER HAND VALUE")
+    print(evaluate_hand(dealer_card_values))
+
+def evaluate_hand(cards):
+    '''
+    Accepts a list of card values to evaluate the hand.
+    Aces represented as "1"
+    '''
+    values = [0]
+    for card in cards:
+        extra_vals = []
+        for i in range(len(values)):
+            values[i] += card
+            if card == 1:
+                extra_vals.append(values[i] + 10)
+        values += extra_vals
+    return [x for x in values if x <= 21]
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--cfg', type=str, default='cfg/yolov3-spp.cfg', help='*.cfg path')
-    parser.add_argument('--names', type=str, default='data/coco.names', help='*.names path')
-    parser.add_argument('--weights', type=str, default='weights/yolov3-spp-ultralytics.pt', help='weights path')
-    parser.add_argument('--source', type=str, default='data/samples', help='source')  # input file/folder, 0 for webcam
+    parser.add_argument('--names', type=str, default='data/custom.names', help='*.names path')
+    parser.add_argument('--weights', type=str, default='weights/last.pt', help='weights path')
+    parser.add_argument('--source', type=str, default='0', help='source')  # input file/folder, 0 for webcam
     parser.add_argument('--output', type=str, default='output', help='output folder')  # output folder
     parser.add_argument('--img-size', type=int, default=512, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.3, help='object confidence threshold')
