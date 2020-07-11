@@ -4,6 +4,7 @@ from models import *  # set ONNX_EXPORT in models.py
 from utils.datasets import *
 from utils.utils import *
 from utils.blackjack_utils import *
+import numpy as np
 
 running_total = 0
 seen_cards = [False] * 52
@@ -132,7 +133,6 @@ def detect(save_img=False):
 
             #Blackjack full frame parameters:
             cards_in_frame = []
-            print("RESET")
 
             # Process detections
             for i, det in enumerate(pred):  # detections for image i
@@ -208,6 +208,8 @@ def detect(save_img=False):
     print('Done. (%.3fs)' % (time.time() - t0))
 
 def update_seen_cards():
+    global seen_cards
+    global running_total
     #If seen in at least three out of five past frames, card is valid:
     all_seen = []
     past_lists = [past_five, past_four, past_three, past_two, past_one]
@@ -219,45 +221,81 @@ def update_seen_cards():
         if all_seen.count(num) >= 3:
             confirmed_cards.append(num)
     #Determine if there is a new card
-    new_cards = set(all_seen).difference(set(confirmed_cards))
+    print(all_seen)
+    print(confirmed_cards)
+    # new_cards = set(all_seen).difference(set(confirmed_cards))
+    # new_cards = np.setdiff1d(confirmed_cards, all_seen)
+    far_past = past_four + past_five
+    far_p = []
+    for subl in far_past:
+        for item in subl:
+            far_p.append(item)
+    new_cards = set(confirmed_cards).difference(set(far_p))
+    print(len(card_values))
     for new_card in new_cards:
         if seen_cards[new_card]:
             #Card has already been seen - new deck, restart count
             running_total = 0
+            print("****************************RESET CARD COUNT****************************")
+            seen_cards = [False] * 52
         else:
             seen_cards[new_card] = True
+            #Update card count
+            card_val = int(card_values[new_card])
+            print("*********************************CARD_VALUE*********************************", card_val, new_card)
+            if 2 <= card_val <= 6:
+                running_total += 1
+            elif 7 <= card_val <= 9:
+                #No change
+                continue
+            else:
+                running_total -= 1
     
 
 
 def evaluate_position(cards):
+    global past_five
+    global past_four
+    global past_three
+    global past_two
+    global past_one
     my_cards = []
     dealer_cards = []
     update_seen_cards()
     for card in cards:
         card_class, card_x, card_y = card
         if card_y > 0.5:
-            my_cards.append(card)
+            my_cards.append(card[0])
         else:
-            dealer_cards.append(card)
+            dealer_cards.append(card[0])
 
     hand_value = 0
-    my_card_values = [int(card_values[x[0]]) for x in my_cards]
-    dealer_card_values = [int(card_values[y[0]]) for y in dealer_cards]
-    print(my_card_values)
-    print(dealer_card_values)
-    print("EVALUATED:", cards)
     print("MY CARDS:", my_cards)
-    print("MY HAND VALUE")
-    print(evaluate_hand(my_card_values))
-    print("DEALER CARDS:", dealer_cards)
-    print("DEALER HAND VALUE")
-    print(evaluate_hand(dealer_card_values))
+    print("DEALER CARDS", dealer_cards)
+    # my_card_values = [int(card_values[x[0]]) for x in my_cards]
+    # dealer_card_values = [int(card_values[y[0]]) for y in dealer_cards]
+    # print("EVALUATED:", cards)
+    # print("MY CARDS:", my_cards)
+    # print("MY HAND VALUE")
+    # print(evaluate_hand(my_card_values))
+    # print("DEALER CARDS:", dealer_cards)
+    # print("DEALER HAND VALUE")
+    # print(evaluate_hand(dealer_card_values))
+    print("RUNNING TOTAL:", str(running_total))
+    past_five = past_four.copy()
+    past_four = past_three.copy()
+    past_three = past_two.copy()
+    past_two = past_one.copy()
+    # past_one = [my_card_values.copy(), dealer_card_values.copy()]
+    past_one = [my_cards.copy(), dealer_cards.copy()]
 
-def evaluate_hand(cards):
+
+def evaluate_hand(hand):
     '''
     Accepts a list of card values to evaluate the hand.
     Aces represented as "1"
     '''
+    cards = [int(card_values[x[0]]) for x in hand]
     values = [0]
     for card in cards:
         extra_vals = []
