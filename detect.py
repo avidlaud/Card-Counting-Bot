@@ -265,9 +265,9 @@ def evaluate_position(cards):
     for card in cards:
         card_class, card_x, card_y = card
         if card_y > 0.5:
-            my_cards.append(card[0])
+            my_cards.append(card_class)
         else:
-            dealer_cards.append(card[0])
+            dealer_cards.append(card_class)
 
     hand_value = 0
     print("MY CARDS:", my_cards)
@@ -305,6 +305,31 @@ def evaluate_hand(hand):
                 extra_vals.append(values[i] + 10)
         values += extra_vals
     return [x for x in values if x <= 21]
+
+def strategy(my_hand, dealer_hand):
+    #Has ace in hand - soft total
+    my_hand_value = sorted(evaluate_hand(my_hand))[-1]
+    #Dealer only has one up facing card
+    dealer_card = dealer_hand[0]
+    #Soft value
+    if 1 in my_hand and len(my_hand) == 2:
+        if 12 <= my_hand_value <= 17:
+            return True
+        elif my_hand_value == 18:
+            return True if 9 <= dealer_card <= 10 else False
+        else:
+            return False
+    #Hard value
+    else:
+        if 5 <= my_hand_value <= 11:
+            return True
+        elif my_hand_value == 12:
+            return False if 4 <= dealer_card <= 6 else True
+        elif 13 <= my_hand_value <= 16:
+            return False if 2 <= dealer_card <= 6 else True
+        else:
+            return False
+
 
 
 if __name__ == '__main__':
