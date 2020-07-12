@@ -20,6 +20,9 @@ prev_seen = []
 
 current_cards = []
 
+confirmed_my_hand = []
+confirmed_dealer_hand = []
+
 card_values = load_card_values('data/card.values')
 
 def detect(save_img=False):
@@ -272,8 +275,8 @@ def evaluate_position(cards):
     hand_value = 0
     print("MY CARDS:", my_cards)
     print("DEALER CARDS", dealer_cards)
-    # my_card_values = [int(card_values[x[0]]) for x in my_cards]
-    # dealer_card_values = [int(card_values[y[0]]) for y in dealer_cards]
+    my_card_values = [int(card_values[x]) for x in my_cards]
+    dealer_card_values = [int(card_values[y]) for y in dealer_cards]
     # print("EVALUATED:", cards)
     # print("MY CARDS:", my_cards)
     # print("MY HAND VALUE")
@@ -281,6 +284,17 @@ def evaluate_position(cards):
     # print("DEALER CARDS:", dealer_cards)
     # print("DEALER HAND VALUE")
     # print(evaluate_hand(dealer_card_values))
+    if len(my_cards) > 0 and len(dealer_cards) > 0:
+        if strategy(my_card_values, dealer_card_values):
+            print("**********HIT**********")
+        else:
+            print("**********STAND**********")
+    if len(my_cards) == 0 and len(dealer_cards) == 0:
+        if running_total >= 0:
+            bet_size = 10*(running_total+1)
+        else:
+            bet_size = 10
+        print("BET:", bet_size)
     print("RUNNING TOTAL:", str(running_total))
     past_five = past_four.copy()
     past_four = past_three.copy()
@@ -295,7 +309,7 @@ def evaluate_hand(hand):
     Accepts a list of card values to evaluate the hand.
     Aces represented as "1"
     '''
-    cards = [int(card_values[x[0]]) for x in hand]
+    cards = hand
     values = [0]
     for card in cards:
         extra_vals = []
@@ -308,7 +322,12 @@ def evaluate_hand(hand):
 
 def strategy(my_hand, dealer_hand):
     #Has ace in hand - soft total
-    my_hand_value = sorted(evaluate_hand(my_hand))[-1]
+    my_hand_eval = evaluate_hand(my_hand)
+    if len(my_hand_eval) == 0:
+        #Bust
+        return False
+    else:
+        my_hand_value = sorted(my_hand_eval)[-1]
     #Dealer only has one up facing card
     dealer_card = dealer_hand[0]
     #Soft value
