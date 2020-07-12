@@ -165,7 +165,7 @@ def detect(save_img=False):
                             with open(save_path[:save_path.rfind('.')] + '.txt', 'a') as file:
                                 file.write(('%g ' * 5 + '\n') % (cls, *xywh))  # label format
                             #Blackjack information
-                            print(xywh[:2])
+                            # print(xywh[:2])
                             card_class, card_x, card_y = int(cls), xywh[0], xywh[1]
                             cards_in_frame.append((card_class, card_x, card_y))
 
@@ -174,7 +174,7 @@ def detect(save_img=False):
                             plot_one_box(xyxy, im0, label=label, color=colors[int(cls)])
 
                 # Print time (inference + NMS)
-                print('%sDone. (%.3fs)' % (s, t2 - t1))
+                # print('%sDone. (%.3fs)' % (s, t2 - t1))
 
                 # Stream results
                 if view_img:
@@ -224,8 +224,8 @@ def update_seen_cards():
         if all_seen.count(num) >= 3:
             confirmed_cards.append(num)
     #Determine if there is a new card
-    print(all_seen)
-    print(confirmed_cards)
+    # print(all_seen)
+    # print(confirmed_cards)
     # new_cards = set(all_seen).difference(set(confirmed_cards))
     # new_cards = np.setdiff1d(confirmed_cards, all_seen)
     far_past = past_four + past_five
@@ -239,13 +239,13 @@ def update_seen_cards():
         if seen_cards[new_card]:
             #Card has already been seen - new deck, restart count
             running_total = 0
-            print("****************************RESET CARD COUNT****************************")
+            # print("****************************RESET CARD COUNT****************************")
             seen_cards = [False] * 52
         else:
             seen_cards[new_card] = True
             #Update card count
             card_val = int(card_values[new_card])
-            print("*********************************CARD_VALUE*********************************", card_val, new_card)
+            # print("*********************************CARD_VALUE*********************************", card_val, new_card)
             if 2 <= card_val <= 6:
                 running_total += 1
             elif 7 <= card_val <= 9:
@@ -328,6 +328,7 @@ def strategy(my_hand, dealer_hand):
         return False
     else:
         my_hand_value = sorted(my_hand_eval)[-1]
+    print(my_hand_value)
     #Dealer only has one up facing card
     dealer_card = dealer_hand[0]
     #Soft value
