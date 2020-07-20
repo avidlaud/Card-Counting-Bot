@@ -145,8 +145,6 @@ def detect(save_img=False):
                     p, s, im0 = path[i], '%g: ' % i, im0s[i].copy()
                 else:
                     p, s, im0 = path, '', im0s
-
-                save_path = str(Path(out) / Path(p).name)
                 s += '%gx%g ' % img.shape[2:]  # print string
                 gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  #  normalization gain whwh
                 if det is not None and len(det):
@@ -160,14 +158,11 @@ def detect(save_img=False):
 
                     # Write results
                     for *xyxy, conf, cls in det:
-                        if save_txt:  # Write to file
-                            xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                            with open(save_path[:save_path.rfind('.')] + '.txt', 'a') as file:
-                                file.write(('%g ' * 5 + '\n') % (cls, *xywh))  # label format
-                            #Blackjack information
-                            # print(xywh[:2])
-                            card_class, card_x, card_y = int(cls), xywh[0], xywh[1]
-                            cards_in_frame.append((card_class, card_x, card_y))
+                        xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
+                        #Blackjack information
+                        # print(xywh[:2])
+                        card_class, card_x, card_y = int(cls), xywh[0], xywh[1]
+                        cards_in_frame.append((card_class, card_x, card_y))
 
                         if save_img or view_img:  # Add bbox to image
                             label = '%s %.2f' % (names[int(cls)], conf)
@@ -181,32 +176,11 @@ def detect(save_img=False):
                     cv2.imshow(p, im0)
                     if cv2.waitKey(1) == ord('q'):  # q to quit
                         raise StopIteration
-
-                # Save results (image with detections)
-                if save_img:
-                    if dataset.mode == 'images':
-                        cv2.imwrite(save_path, im0)
-                    else:
-                        if vid_path != save_path:  # new video
-                            vid_path = save_path
-                            if isinstance(vid_writer, cv2.VideoWriter):
-                                vid_writer.release()  # release previous video writer
-
-                            fps = vid_cap.get(cv2.CAP_PROP_FPS)
-                            w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                            h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                            vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*opt.fourcc), fps, (w, h))
-                        vid_writer.write(im0)
             
             #Blackjack gameplay
-            evaluate_position(cards_in_frame)
+            evaluate_position(cards_in_frame, names)
 
         frame_number += 1
-
-    if save_txt or save_img:
-        print('Results saved to %s' % os.getcwd() + os.sep + out)
-        if platform == 'darwin':  # MacOS
-            os.system('open ' + save_path)
 
     print('Done. (%.3fs)' % (time.time() - t0))
 
@@ -234,7 +208,6 @@ def update_seen_cards():
         for item in subl:
             far_p.append(item)
     new_cards = set(confirmed_cards).difference(set(far_p))
-    print(len(card_values))
     for new_card in new_cards:
         if seen_cards[new_card]:
             #Card has already been seen - new deck, restart count
@@ -256,7 +229,7 @@ def update_seen_cards():
     
 
 
-def evaluate_position(cards):
+def evaluate_position(cards, names):
     global past_five
     global past_four
     global past_three
@@ -273,8 +246,10 @@ def evaluate_position(cards):
             dealer_cards.append(card_class)
 
     hand_value = 0
-    print("MY CARDS:", my_cards)
-    print("DEALER CARDS", dealer_cards)
+    my_card_names = [names[x] for x in my_cards]
+    dealer_card_names = [names[y] for y in dealer_cards]
+    print("MY CARDS:", my_card_names)
+    print("DEALER CARDS:", dealer_card_names)
     my_card_values = [int(card_values[x]) for x in my_cards]
     dealer_card_values = [int(card_values[y]) for y in dealer_cards]
     # print("EVALUATED:", cards)
