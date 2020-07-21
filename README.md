@@ -45,6 +45,15 @@ The bot is now dealt an 8, which does not have affect the running total.  Now, t
 
 After the hand is complete and cleared, the bot suggests a bet sizing of 40 (base bet 10) based on its running count of 3.
 
+### Example Data
+A test of 50 hands were played and the data was [recorded](https://docs.google.com/spreadsheets/d/1LZPI6gJEfdLgVDknQzwRMKQMLJLM4S8aXmsj7AiFTXk/edit?usp=sharing).
+
+Key statistics:
+- 42% winrate
+- 35% profit
+
+Despite losing a bit more than average (player winrate is ~48%), the bot was still able to turn a profit with its card counting betting strategy.
+
 ## Object Detection
 YOLOv3 was used for object detection.  Since the original model was implemented in Darknet, [ultralytics's PyTorch port](https://github.com/ultralytics/yolov3) was used instead.
 
